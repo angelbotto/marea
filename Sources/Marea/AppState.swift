@@ -42,9 +42,10 @@ final class AppState: ObservableObject {
         let cfg = config
         let apply = applyActions ?? cfg.settings.autoMode
         let withStats = cfg.settings.collectStats
+        let orcaPaths = cfg.stacks.map { $0.orcaPath }
         Task {
-            let probes = await Task.detached { Probes.gather(withStats: withStats) }.value
-            let statuses = engine.evaluate(config: cfg, probes: probes)
+            let probes = await Task.detached { Probes.gather(withStats: withStats, orcaPaths: orcaPaths) }.value
+            let statuses = engine.evaluate(config: cfg, probes: probes).sortedRunningFirst()
             if apply {
                 let actions = statuses.filter { $0.config.managed }.compactMap { s -> (Bool, StackConfig)? in
                     let isUp = (s.runState == .running || s.runState == .partial)
@@ -86,7 +87,7 @@ final class AppState: ObservableObject {
                                running: $0.runState == .running || $0.runState == .partial,
                                runningCount: $0.runningCount, totalCount: $0.totalCount,
                                memBytes: $0.memBytes, cpuPercent: $0.cpuPercent,
-                               agent: $0.agent.rawValue)
+                               agent: $0.agent.rawValue, gsd: $0.gsd)
             },
             history: history)
         let url = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".config/marea/snapshot.json")

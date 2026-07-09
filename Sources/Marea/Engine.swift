@@ -132,7 +132,8 @@ struct Engine {
             result.append(StackStatus(config: stack, runState: runState, agent: agent,
                                       idleMinutes: idleMin, shouldRun: shouldRun, reason: reason,
                                       runningCount: running.count, totalCount: names.count,
-                                      cpuPercent: cpu, memBytes: mem, containers: infos))
+                                      cpuPercent: cpu, memBytes: mem, containers: infos,
+                                      gsd: probes.gsd[stack.orcaPath]))
         }
         return result
     }

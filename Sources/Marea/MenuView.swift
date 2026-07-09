@@ -106,6 +106,7 @@ struct StackRow: View {
                     if status.agent != .none { agentBadge }
                     Text(status.reason).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                 }
+                if let g = status.gsd { GSDBadge(gsd: g) }
             }
             Spacer()
             if status.config.managed && status.shouldRun != isUp && state.config.settings.autoMode {
@@ -152,6 +153,45 @@ struct StackRow: View {
         case .waiting:   Label("espera", systemImage: "hand.raised.fill").font(.system(size: 10)).foregroundStyle(.orange)
         case .idle:      Label("idle", systemImage: "moon.zzz").font(.system(size: 10)).foregroundStyle(.secondary)
         case .none:      EmptyView()
+        }
+    }
+}
+
+/// Badge con el estado GSD del proyecto (milestone, fase, status, progreso).
+struct GSDBadge: View {
+    let gsd: GSDInfo
+
+    private var statusColor: Color {
+        switch gsd.status {
+        case "executing": return .green
+        case "planning", "discussing": return .blue
+        case "paused": return .orange
+        case "complete", "done": return .teal
+        default: return .secondary
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "checklist").font(.system(size: 9)).foregroundStyle(.purple)
+            if !gsd.milestone.isEmpty {
+                Text(gsd.milestone).font(.system(size: 10, weight: .medium))
+            }
+            if !gsd.phase.isEmpty {
+                Text("· Fase \(gsd.phase)").font(.system(size: 10))
+                if !gsd.phaseName.isEmpty {
+                    Text(gsd.phaseName).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            if !gsd.status.isEmpty {
+                Text(gsd.status).font(.system(size: 9))
+                    .padding(.horizontal, 4).padding(.vertical, 1)
+                    .background(statusColor.opacity(0.18), in: Capsule())
+                    .foregroundStyle(statusColor)
+            }
+            if gsd.percent > 0 {
+                Text("\(gsd.percent)%").font(.system(size: 10)).foregroundStyle(.secondary).monospacedDigit()
+            }
         }
     }
 }

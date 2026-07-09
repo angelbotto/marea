@@ -90,6 +90,25 @@ struct StackStatus: Identifiable, Sendable {
     var cpuPercent: Double = 0    // suma de CPU% de sus contenedores
     var memBytes: Double = 0      // suma de RAM usada por sus contenedores
     var containers: [ContainerInfo] = []  // detalle por contenedor
+    var gsd: GSDInfo?             // estado GSD del proyecto, si aplica
+}
+
+extension Array where Element == StackStatus {
+    /// Ordena: corriendo primero, luego parcial, luego apagado (estable).
+    func sortedRunningFirst() -> [StackStatus] {
+        func rank(_ s: RunState) -> Int {
+            switch s {
+            case .running: return 0
+            case .partial: return 1
+            case .stopped: return 2
+            case .unknown: return 3
+            }
+        }
+        return enumerated().sorted { a, b in
+            let ra = rank(a.element.runState), rb = rank(b.element.runState)
+            return ra != rb ? ra < rb : a.offset < b.offset
+        }.map { $0.element }
+    }
 }
 
 /// Métrica puntual de un contenedor (de `docker stats`).
@@ -126,6 +145,7 @@ struct Snapshot: Codable, Sendable {
         var memBytes: Double
         var cpuPercent: Double
         var agent: String
+        var gsd: GSDInfo?
     }
 }
 

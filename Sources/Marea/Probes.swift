@@ -44,6 +44,8 @@ struct ProbeResult: Sendable {
     var allContainers: [String: String] = [:]
     /// nombre de contenedor -> detalle completo (con CPU/RAM si withStats)
     var infos: [String: ContainerInfo] = [:]
+    /// orcaPath -> estado GSD del proyecto (si usa GSD)
+    var gsd: [String: GSDInfo] = [:]
 }
 
 struct RunStateDir: Sendable {
@@ -226,7 +228,7 @@ extension String {
 
 /// Un ciclo de observación completo (se corre fuera del main thread).
 enum Probes {
-    static func gather(withStats: Bool) -> ProbeResult {
+    static func gather(withStats: Bool, orcaPaths: [String] = []) -> ProbeResult {
         var list = DockerProbe.containers()
         if withStats {
             let stats = DockerProbe.stats()
@@ -241,11 +243,14 @@ enum Probes {
         var allContainers: [String: String] = [:]
         var infos: [String: ContainerInfo] = [:]
         for c in list { allContainers[c.name] = c.project; infos[c.name] = c }
+        var gsd: [String: GSDInfo] = [:]
+        for path in Set(orcaPaths) { if let info = GSDProbe.read(path) { gsd[path] = info } }
         return ProbeResult(orca: OrcaProbe.probe(),
                            compose: DockerProbe.composeStates(),
                            running: running,
                            swap: SystemProbe.swapUsedPercent(),
                            allContainers: allContainers,
-                           infos: infos)
+                           infos: infos,
+                           gsd: gsd)
     }
 }
