@@ -1,0 +1,54 @@
+name: Marea
+options:
+  bundleIdPrefix: is.botto
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: 22R43BN2XG
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  Marea:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/Marea
+    info:
+      path: Generated/Marea-Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleName: Marea
+        CFBundleDisplayName: Marea
+        LSMinimumSystemVersion: "13.0"
+        NSHumanReadableCopyright: "© 2026 Angel Botto. Hecho con Claude Code."
+    entitlements:
+      path: Marea.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.botto.marea
+    dependencies:
+      - target: MareaWidget
+        embed: true
+
+  MareaWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Widget
+    info:
+      path: Generated/MareaWidget-Info.plist
+      properties:
+        CFBundleDisplayName: Marea
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: MareaWidget.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: is.botto.marea.widget

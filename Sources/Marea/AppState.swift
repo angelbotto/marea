@@ -90,11 +90,16 @@ final class AppState: ObservableObject {
                                agent: $0.agent.rawValue, gsd: $0.gsd)
             },
             history: history)
-        let url = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".config/marea/snapshot.json")
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
-        if let data = try? enc.encode(snap) {
-            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? data.write(to: url)
+        guard let data = try? enc.encode(snap) else { return }
+        // 1) ~/.config/marea/snapshot.json (integraciones / debug)
+        let url = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".config/marea/snapshot.json")
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url)
+        // 2) contenedor del App Group (lo lee el widget de WidgetKit); nil si no hay entitlement
+        if let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.id) {
+            try? data.write(to: group.appendingPathComponent("snapshot.json"))
+            WidgetBridge.reload()
         }
     }
 

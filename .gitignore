@@ -6,6 +6,12 @@ Package.resolved
 # App bundle generado
 Marea.app/
 
+# Xcode (proyecto generado por xcodegen desde project.yml)
+Marea.xcodeproj/
+.xcbuild/
+Generated/
+*.xcworkspace
+
 # macOS
 .DS_Store
 
