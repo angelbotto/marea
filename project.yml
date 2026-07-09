@@ -29,14 +29,11 @@ targets:
         CFBundleIconFile: AppIcon
         LSMinimumSystemVersion: "13.0"
         NSHumanReadableCopyright: "© 2026 Angel Botto. Hecho con Claude Code."
-    # App Group para datos vivos del widget — reactivar tras aceptar el Apple Developer PLA:
-    #   descomentar el bloque entitlements de este target y el de MareaWidget, luego
-    #   `xcodegen generate && xcodebuild ... -allowProvisioningUpdates`.
-    # entitlements:
-    #   path: Generated/Marea.entitlements
-    #   properties:
-    #     com.apple.security.application-groups:
-    #       - group.is.botto.marea
+    entitlements:
+      path: Generated/Marea.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.is.botto.marea
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: is.botto.marea
@@ -55,12 +52,12 @@ targets:
         CFBundleDisplayName: Marea
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
-    # entitlements:
-    #   path: Generated/MareaWidget.entitlements
-    #   properties:
-    #     com.apple.security.app-sandbox: true
-    #     com.apple.security.application-groups:
-    #       - group.is.botto.marea
+    entitlements:
+      path: Generated/MareaWidget.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups:
+          - group.is.botto.marea
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: is.botto.marea.widget
