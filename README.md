@@ -4,7 +4,17 @@
 
 Marea es una app nativa de barra de menú para macOS. Observa qué proyectos tienes activos en Orca (agentes corriendo, actividad reciente) y prende/apaga sus stacks de Docker en consecuencia — para que dejes de tener contenedores comiéndote RAM y calentando el Mac por proyectos que ya no estás tocando.
 
-![menu bar app](https://img.shields.io/badge/macOS-13%2B-blue) ![SwiftUI](https://img.shields.io/badge/SwiftUI-MenuBarExtra-orange)
+![macOS](https://img.shields.io/badge/macOS-13%2B-blue) ![SwiftUI](https://img.shields.io/badge/SwiftUI-MenuBarExtra-orange) ![WidgetKit](https://img.shields.io/badge/WidgetKit-widget-purple) ![license](https://img.shields.io/badge/license-MIT-green)
+
+> **Proyecto personal.** Nació de un dolor real: dejo muchos proyectos abiertos a la vez y sus contenedores de Docker me comían la RAM y calentaban el Mac. Marea lo resuelve conectándose a mi flujo de trabajo.
+
+## 🧰 Mi flujo (de dónde sale Marea)
+
+Marea está pensada alrededor de las herramientas con las que trabajo a diario:
+
+- **[Orca](https://onorca.dev)** — mi terminal/workspace de agentes. Es la fuente de verdad de "qué estoy trabajando": Marea lee sus worktrees y el estado de los agentes.
+- **[Claude Code](https://claude.com/claude-code)** — con quien construí Marea (de cero, en varias sesiones). Los hooks de agentes de Orca reportan a `last-status.json`, que Marea usa para saber si un agente está ejecutando.
+- **GSD — Get Shit Done** — mi sistema de planificación por fases (basado en un directorio `.planning/`). Marea lee el `.planning/STATE.md` de cada proyecto y muestra el milestone y la fase actual junto a sus contenedores.
 
 ## ✨ Qué hace
 
@@ -74,9 +84,22 @@ Swift Package ejecutable, SwiftUI `MenuBarExtra`. Sin dependencias externas.
 
 También escribe `~/.config/marea/snapshot.json` cada ciclo (para widgets / integraciones).
 
+## 🗺️ Roadmap
+
+Ideas para seguir mejorando Marea:
+
+- [ ] **Widget con datos en vivo** — activar la capability *App Group* para que el widget de WidgetKit lea el snapshot (hoy compila y aparece, falta el permiso).
+- [ ] **Notificaciones** — avisar cuando prende/apaga un stack ("apagué `plane`, liberé 1.2 GB").
+- [ ] **Icono propio** en la barra (hoy usa un SF Symbol).
+- [ ] **Persistir el estado de gracia** entre reinicios.
+- [ ] **Acciones GSD** — abrir la fase actual o disparar `/gsd-*` desde el menú.
+- [ ] **Notarización** para poder compartir el `.app` fuera de mi Mac.
+- [ ] **Historial más largo** y gráficas por stack.
+
 ## 👤 Créditos
 
-Hecho por **Angel Botto** · 2026. Construido con Claude Code.
+Hecho por **[Angel Botto](https://github.com/angelbotto)** · 2026.
+Construido en pareja con **Claude Code** 🤖, sobre **Orca** y **GSD**.
 
 ## 📄 Licencia
 
