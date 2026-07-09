@@ -37,6 +37,8 @@ struct AppSettings: Codable, Equatable, Sendable {
     var pollSeconds: Double = 15
     /// Muestrear CPU/RAM por contenedor (docker stats). Cuesta ~1-2s por ciclo.
     var collectStats: Bool = true
+    /// Mostrar el panel flotante en el escritorio.
+    var showWidget: Bool = false
 }
 
 extension AppSettings {
@@ -51,6 +53,7 @@ extension AppSettings {
         pressureSwapPercent = try c.decodeIfPresent(Double.self, forKey: .pressureSwapPercent) ?? d.pressureSwapPercent
         pollSeconds = try c.decodeIfPresent(Double.self, forKey: .pollSeconds) ?? d.pollSeconds
         collectStats = try c.decodeIfPresent(Bool.self, forKey: .collectStats) ?? d.collectStats
+        showWidget = try c.decodeIfPresent(Bool.self, forKey: .showWidget) ?? d.showWidget
     }
 }
 

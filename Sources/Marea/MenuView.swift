@@ -51,6 +51,13 @@ struct MenuView: View {
                 Image(systemName: state.busy ? "arrow.clockwise.circle" : "arrow.clockwise")
             }.buttonStyle(.borderless).help("Refrescar")
             Button {
+                state.setShowWidget(!state.config.settings.showWidget)
+            } label: {
+                Image(systemName: state.config.settings.showWidget ? "macwindow.badge.plus" : "macwindow")
+            }
+                .buttonStyle(.borderless)
+                .help(state.config.settings.showWidget ? "Ocultar widget de escritorio" : "Mostrar widget de escritorio")
+            Button {
                 openWindow(id: "prefs")
                 NSApp.activate(ignoringOtherApps: true)
             } label: { Image(systemName: "gearshape") }

@@ -3,6 +3,8 @@ import SwiftUI
 
 @MainActor
 final class AppState: ObservableObject {
+    static let shared = AppState()
+
     @Published var config: Config
     @Published var statuses: [StackStatus] = []
     @Published var swapPercent: Double = 0
@@ -117,6 +119,13 @@ final class AppState: ObservableObject {
     func setAutoMode(_ on: Bool) {
         config.settings.autoMode = on
         ConfigStore.save(config)
+    }
+
+    /// Muestra/oculta el widget de escritorio y persiste la preferencia.
+    func setShowWidget(_ on: Bool) {
+        config.settings.showWidget = on
+        ConfigStore.save(config)
+        on ? WidgetPanelController.shared.show() : WidgetPanelController.shared.hide()
     }
 
     /// Persiste cambios hechos en Preferencias y reprograma el timer.

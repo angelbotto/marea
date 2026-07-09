@@ -4,7 +4,7 @@ import AppKit
 @main
 struct MareaApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @StateObject private var state = AppState()
+    @StateObject private var state = AppState.shared
 
     var body: some Scene {
         MenuBarExtra {
@@ -30,5 +30,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // app de barra: sin icono en el Dock
         NSApp.setActivationPolicy(.accessory)
+        // restaurar el widget de escritorio si estaba visible
+        if AppState.shared.config.settings.showWidget {
+            WidgetPanelController.shared.show()
+        }
     }
 }
