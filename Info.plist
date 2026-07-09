@@ -8,6 +8,8 @@
     <string>Marea</string>
     <key>CFBundleExecutable</key>
     <string>Marea</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>is.botto.marea</string>
     <key>CFBundlePackageType</key>

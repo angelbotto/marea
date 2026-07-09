@@ -23,6 +23,7 @@ final class AppState: ObservableObject {
 
     init() {
         self.config = ConfigStore.load()
+        if config.settings.notifications { Notifier.requestAuthorization() }
         scheduleTimer()
         refresh()
     }
@@ -47,14 +48,25 @@ final class AppState: ObservableObject {
             let probes = await Task.detached { Probes.gather(withStats: withStats, orcaPaths: orcaPaths) }.value
             let statuses = engine.evaluate(config: cfg, probes: probes).sortedRunningFirst()
             if apply {
-                let actions = statuses.filter { $0.config.managed }.compactMap { s -> (Bool, StackConfig)? in
+                let acts = statuses.filter { $0.config.managed }.compactMap { s -> (Bool, StackStatus)? in
                     let isUp = (s.runState == .running || s.runState == .partial)
-                    if s.shouldRun && !isUp { return (true, s.config) }
-                    if !s.shouldRun && isUp { return (false, s.config) }
+                    if s.shouldRun && !isUp { return (true, s) }
+                    if !s.shouldRun && isUp { return (false, s) }
                     return nil
                 }
-                if !actions.isEmpty {
-                    await Task.detached { actions.forEach { applyDocker(up: $0.0, $0.1) } }.value
+                if !acts.isEmpty {
+                    let cfgs = acts.map { ($0.0, $0.1.config) }
+                    await Task.detached { cfgs.forEach { applyDocker(up: $0.0, $0.1) } }.value
+                    if cfg.settings.notifications {
+                        for (up, s) in acts {
+                            if up {
+                                Notifier.notify(title: "🟢 Prendí \(s.config.displayName)", body: s.reason)
+                            } else {
+                                Notifier.notify(title: "⚪ Apagué \(s.config.displayName)",
+                                                body: "\(s.reason) → liberé \(humanBytes(s.memBytes))")
+                            }
+                        }
+                    }
                 }
             }
             self.statuses = statuses
@@ -87,7 +99,7 @@ final class AppState: ObservableObject {
                                running: $0.runState == .running || $0.runState == .partial,
                                runningCount: $0.runningCount, totalCount: $0.totalCount,
                                memBytes: $0.memBytes, cpuPercent: $0.cpuPercent,
-                               agent: $0.agent.rawValue, gsd: $0.gsd)
+                               agent: $0.agent.rawValue, gsd: $0.gsd, orca: $0.orca)
             },
             history: history)
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601

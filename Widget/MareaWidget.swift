@@ -48,13 +48,20 @@ struct MareaWidgetView: View {
                 if running.isEmpty {
                     Text("Nada corriendo").font(.system(size: 11)).foregroundStyle(.secondary)
                 } else {
-                    ForEach(running.prefix(family == .systemLarge ? 8 : 3)) { st in
+                    ForEach(running.prefix(family == .systemLarge ? 7 : 3)) { st in
                         HStack(spacing: 5) {
                             Circle().fill(.green).frame(width: 6, height: 6)
-                            Text(st.name).font(.system(size: 11)).lineLimit(1)
-                            if let g = st.gsd, !g.milestone.isEmpty {
-                                Text(g.phase.isEmpty ? g.milestone : "\(g.milestone)·F\(g.phase)")
-                                    .font(.system(size: 9)).foregroundStyle(.purple)
+                            VStack(alignment: .leading, spacing: 0) {
+                                HStack(spacing: 4) {
+                                    Text(st.name).font(.system(size: 11)).lineLimit(1)
+                                    if let g = st.gsd, !g.milestone.isEmpty {
+                                        Text(g.phase.isEmpty ? g.milestone : "\(g.milestone)·F\(g.phase)")
+                                            .font(.system(size: 9)).foregroundStyle(.purple)
+                                    }
+                                }
+                                if let o = st.orca, !o.branch.isEmpty {
+                                    Text(o.branch).font(.system(size: 9)).foregroundStyle(.teal).lineLimit(1)
+                                }
                             }
                             Spacer()
                             Text(widgetHumanBytes(st.memBytes)).font(.system(size: 10))

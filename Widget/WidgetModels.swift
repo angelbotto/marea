@@ -21,6 +21,14 @@ struct WStack: Codable, Identifiable {
     var cpuPercent: Double
     var agent: String
     var gsd: WGSD?
+    var orca: WOrca?
+}
+
+struct WOrca: Codable {
+    var branch: String
+    var workspaceStatus: String
+    var linkedPR: String
+    var childCount: Int
 }
 
 struct WGSD: Codable {

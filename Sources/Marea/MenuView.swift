@@ -106,6 +106,7 @@ struct StackRow: View {
                     if status.agent != .none { agentBadge }
                     Text(status.reason).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                 }
+                if let o = status.orca { OrcaBadge(orca: o) }
                 if let g = status.gsd { GSDBadge(gsd: g) }
             }
             Spacer()
@@ -153,6 +154,49 @@ struct StackRow: View {
         case .waiting:   Label("espera", systemImage: "hand.raised.fill").font(.system(size: 10)).foregroundStyle(.orange)
         case .idle:      Label("idle", systemImage: "moon.zzz").font(.system(size: 10)).foregroundStyle(.secondary)
         case .none:      EmptyView()
+        }
+    }
+}
+
+/// Badge con la info del worktree en Orca (branch, estado, PR, agentes).
+struct OrcaBadge: View {
+    let orca: OrcaInfo
+
+    private var statusColor: Color {
+        switch orca.workspaceStatus {
+        case "in-progress": return .blue
+        case "needs-review", "review": return .orange
+        case "done", "completed", "merged": return .green
+        case "blocked": return .red
+        default: return .secondary
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "arrow.triangle.branch").font(.system(size: 9)).foregroundStyle(.teal)
+            if !orca.branch.isEmpty {
+                Text(orca.branch).font(.system(size: 10, weight: .medium)).lineLimit(1)
+                    .truncationMode(.middle).frame(maxWidth: 130, alignment: .leading)
+            }
+            if orca.unread {
+                Circle().fill(.blue).frame(width: 5, height: 5)
+            }
+            if !orca.workspaceStatus.isEmpty {
+                Text(orca.workspaceStatus).font(.system(size: 9))
+                    .padding(.horizontal, 4).padding(.vertical, 1)
+                    .background(statusColor.opacity(0.18), in: Capsule())
+                    .foregroundStyle(statusColor)
+            }
+            if !orca.linkedPR.isEmpty {
+                Label("#\(orca.linkedPR)", systemImage: "arrow.triangle.pull")
+                    .font(.system(size: 9)).foregroundStyle(.purple)
+            }
+            if orca.childCount > 0 {
+                Label("\(orca.childCount)", systemImage: "person.2.fill")
+                    .font(.system(size: 9)).foregroundStyle(.secondary)
+                    .help("\(orca.childCount) worktree(s) hijo (agentes)")
+            }
         }
     }
 }

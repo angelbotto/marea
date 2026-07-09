@@ -67,7 +67,12 @@ struct WidgetView: View {
                     HStack(spacing: 6) {
                         Circle().fill(s.runState == .running ? Color.green : Color.yellow)
                             .frame(width: 7, height: 7)
-                        Text(s.config.displayName).font(.system(size: 11)).lineLimit(1)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(s.config.displayName).font(.system(size: 11)).lineLimit(1)
+                            if let b = s.orca?.branch, !b.isEmpty {
+                                Text(b).font(.system(size: 9)).foregroundStyle(.teal).lineLimit(1)
+                            }
+                        }
                         if s.agent == .executing {
                             Image(systemName: "bolt.fill").font(.system(size: 8)).foregroundStyle(.green)
                         }

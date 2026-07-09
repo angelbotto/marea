@@ -39,6 +39,8 @@ struct AppSettings: Codable, Equatable, Sendable {
     var collectStats: Bool = true
     /// Mostrar el panel flotante en el escritorio.
     var showWidget: Bool = false
+    /// Notificar cuando el modo Auto prende/apaga un stack.
+    var notifications: Bool = true
 }
 
 extension AppSettings {
@@ -54,6 +56,7 @@ extension AppSettings {
         pollSeconds = try c.decodeIfPresent(Double.self, forKey: .pollSeconds) ?? d.pollSeconds
         collectStats = try c.decodeIfPresent(Bool.self, forKey: .collectStats) ?? d.collectStats
         showWidget = try c.decodeIfPresent(Bool.self, forKey: .showWidget) ?? d.showWidget
+        notifications = try c.decodeIfPresent(Bool.self, forKey: .notifications) ?? d.notifications
     }
 }
 
@@ -91,6 +94,7 @@ struct StackStatus: Identifiable, Sendable {
     var memBytes: Double = 0      // suma de RAM usada por sus contenedores
     var containers: [ContainerInfo] = []  // detalle por contenedor
     var gsd: GSDInfo?             // estado GSD del proyecto, si aplica
+    var orca: OrcaInfo?          // info del worktree en Orca, si aplica
 }
 
 extension Array where Element == StackStatus {
@@ -146,6 +150,7 @@ struct Snapshot: Codable, Sendable {
         var cpuPercent: Double
         var agent: String
         var gsd: GSDInfo?
+        var orca: OrcaInfo?
     }
 }
 

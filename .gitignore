@@ -15,6 +15,9 @@ Generated/
 # macOS
 .DS_Store
 
+# iconset intermedio (el AppIcon.icns sí se versiona)
+Resources/Marea.iconset/
+
 # Editores
 *.xcuserstate
 .vscode/

@@ -46,6 +46,8 @@ struct ProbeResult: Sendable {
     var infos: [String: ContainerInfo] = [:]
     /// orcaPath -> estado GSD del proyecto (si usa GSD)
     var gsd: [String: GSDInfo] = [:]
+    /// path del worktree -> info de Orca (branch, status, PR, ...)
+    var orcaWt: [String: OrcaInfo] = [:]
 }
 
 struct RunStateDir: Sendable {
@@ -251,6 +253,7 @@ enum Probes {
                            swap: SystemProbe.swapUsedPercent(),
                            allContainers: allContainers,
                            infos: infos,
-                           gsd: gsd)
+                           gsd: gsd,
+                           orcaWt: OrcaWorktreeProbe.read())
     }
 }

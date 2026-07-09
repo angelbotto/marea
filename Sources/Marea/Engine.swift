@@ -133,7 +133,8 @@ struct Engine {
                                       idleMinutes: idleMin, shouldRun: shouldRun, reason: reason,
                                       runningCount: running.count, totalCount: names.count,
                                       cpuPercent: cpu, memBytes: mem, containers: infos,
-                                      gsd: probes.gsd[stack.orcaPath]))
+                                      gsd: probes.gsd[stack.orcaPath],
+                                      orca: orcaInfo(stack.orcaPath, probes.orcaWt)))
         }
         return result
     }
@@ -164,6 +165,12 @@ struct Engine {
             if up == containers.count { return .running }
             return .partial
         }
+    }
+
+    /// Info de Orca para un orcaPath: match exacto, si no, el mejor prefijo.
+    private func orcaInfo(_ orcaPath: String, _ all: [String: OrcaInfo]) -> OrcaInfo? {
+        if let exact = all[orcaPath] { return exact }
+        return all.first(where: { $0.key.hasPrefix(orcaPath) })?.value
     }
 
     private func agentState(for orcaPath: String, orca: OrcaActivity) -> AgentState {

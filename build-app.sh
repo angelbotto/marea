@@ -17,6 +17,7 @@ rm -rf "$APP"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 cp ".build/release/Marea" "$CONTENTS/MacOS/Marea"
 cp "Info.plist" "$CONTENTS/Info.plist"
+[ -f "Resources/AppIcon.icns" ] && cp "Resources/AppIcon.icns" "$CONTENTS/Resources/AppIcon.icns"
 
 echo "▸ Firmando ad-hoc (necesario para login item)..."
 codesign --force --sign - --identifier "is.botto.marea" "$APP" >/dev/null 2>&1 || \

@@ -58,6 +58,7 @@ struct PreferencesView: View {
             Section("Motor") {
                 Toggle("Modo automático (prender/apagar solo)", isOn: binding(\.autoMode))
                 Toggle("Muestrear CPU/RAM por contenedor", isOn: binding(\.collectStats))
+                Toggle("Notificar al prender/apagar", isOn: binding(\.notifications))
             }
             Section("Inactividad") {
                 stepper("Apagar tras (min) sin actividad", \.freshMinutes, 5...240, 5)
