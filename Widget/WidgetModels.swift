@@ -22,7 +22,12 @@ struct WStack: Codable, Identifiable {
     var agent: String
     var gsd: WGSD?
     var orca: WOrca?
+    var procs: [WProc]?
+    var inDev: Bool?
+    var isRunning: Bool { running || !(procs?.isEmpty ?? true) }
 }
+
+struct WProc: Codable { var name: String; var port: Int }
 
 struct WOrca: Codable {
     var branch: String

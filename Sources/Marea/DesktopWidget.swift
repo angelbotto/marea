@@ -41,7 +41,7 @@ struct WidgetView: View {
     @EnvironmentObject var state: AppState
 
     private var active: [StackStatus] {
-        state.statuses.filter { $0.runState == .running || $0.runState == .partial }
+        state.statuses.filter { $0.serverKind == .docker || $0.serverKind == .host }
     }
 
     var body: some View {
@@ -65,7 +65,7 @@ struct WidgetView: View {
             } else {
                 ForEach(active) { s in
                     HStack(spacing: 6) {
-                        Circle().fill(s.runState == .running ? Color.green : Color.yellow)
+                        Circle().fill(s.serverKind == .host ? Color.cyan : Color.green)
                             .frame(width: 7, height: 7)
                         VStack(alignment: .leading, spacing: 0) {
                             Text(s.config.displayName).font(.system(size: 11)).lineLimit(1)
@@ -77,7 +77,12 @@ struct WidgetView: View {
                             Image(systemName: "bolt.fill").font(.system(size: 8)).foregroundStyle(.green)
                         }
                         Spacer()
-                        Text(humanBytes(s.memBytes)).font(.system(size: 10)).foregroundStyle(.secondary).monospacedDigit()
+                        if s.serverKind == .host {
+                            Text(s.procs.map { ":\($0.port)" }.joined(separator: " "))
+                                .font(.system(size: 9)).foregroundStyle(.cyan).monospacedDigit().lineLimit(1)
+                        } else {
+                            Text(humanBytes(s.memBytes)).font(.system(size: 10)).foregroundStyle(.secondary).monospacedDigit()
+                        }
                     }
                 }
             }

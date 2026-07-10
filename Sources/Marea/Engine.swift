@@ -54,92 +54,144 @@ enum ConfigStore {
     }
 }
 
-/// Núcleo de decisión: fusiona señales de Orca + Docker + sistema.
+/// Núcleo de decisión: fusiona señales de ~/Dev + Orca + Docker + procesos.
 struct Engine {
     /// Recuerda desde cuándo un stack está inactivo (anti-flapping). id -> fecha.
     private var inactiveSince: [String: Date] = [:]
 
     mutating func evaluate(config: Config, probes: ProbeResult, now: Date = Date()) -> [StackStatus] {
-        let orca = probes.orca
-        let compose = probes.compose
-        let runningContainers = probes.running
-        let swapPercent = probes.swap
-        let underPressure = swapPercent >= config.settings.pressureSwapPercent
+        let underPressure = probes.swap >= config.settings.pressureSwapPercent
         let freshWindow = underPressure
             ? config.settings.freshMinutesUnderPressure
             : config.settings.freshMinutes
         let nowMs = now.timeIntervalSince1970 * 1000
+        let home = NSHomeDirectory()
 
+        // --- resolver: cualquier ruta -> raíz de proyecto ---
+        let knownRoots = Set(config.stacks.map { $0.orcaPath })
+            .union(probes.orcaData.roots).union(probes.devRoots)
+        func resolve(_ path: String) -> String? {
+            for (wt, root) in probes.orcaData.wtPathToRoot where path == wt || path.hasPrefix(wt + "/") {
+                return root
+            }
+            return knownRoots.filter { path == $0 || path.hasPrefix($0 + "/") }
+                .max(by: { $0.count < $1.count })
+        }
+
+        // --- procesos host agrupados por raíz de proyecto ---
+        var procsByRoot: [String: [HostProc]] = [:]
+        for p in probes.procs {
+            guard let root = resolve(p.cwd) else { continue }
+            let hp = HostProc(name: p.name, port: p.port, root: root)
+            if !(procsByRoot[root]?.contains { $0.id == hp.id } ?? false) {
+                procsByRoot[root, default: []].append(hp)
+            }
+        }
+
+        // --- señales de agente / actividad, agregadas por raíz (vía resolver) ---
+        let order: [AgentState] = [.none, .idle, .waiting, .executing]
+        var agentByRoot: [String: AgentState] = [:]
+        for (path, state) in probes.orca.agentStateByPath {
+            guard let root = resolve(path) else { continue }
+            let cur = agentByRoot[root] ?? .none
+            if order.firstIndex(of: state)! > order.firstIndex(of: cur)! { agentByRoot[root] = state }
+        }
+        for path in probes.orca.hasAgentTab {
+            guard let root = resolve(path) else { continue }
+            if (agentByRoot[root] ?? .none) == .none { agentByRoot[root] = .idle }
+        }
+        var lastOutByRoot: [String: Double] = [:]
+        for (path, ts) in probes.orca.lastOutputByPath {
+            guard let root = resolve(path) else { continue }
+            lastOutByRoot[root] = max(lastOutByRoot[root] ?? 0, ts)
+        }
+
+        // --- construir items: stacks de config + proyectos descubiertos ---
         var result: [StackStatus] = []
+        var covered = Set<String>()
         for stack in config.stacks {
-            // --- estado real en Docker ---
-            let runState = currentRunState(stack, compose: compose, running: runningContainers)
-
-            // --- actividad en Orca (por prefijo de ruta, cubre worktrees hijos) ---
-            let agent = agentState(for: stack.orcaPath, orca: orca)
-            let lastOut = bestLastOutput(for: stack.orcaPath, orca: orca)
-            let idleMin: Double? = lastOut.map { (nowMs - $0) / 60000 }
-
-            // --- decisión ---
-            var shouldRun: Bool
-            var reason: String
-            if !stack.managed {
-                shouldRun = (runState == .running || runState == .partial)
-                reason = "no gestionado"
-            } else if stack.pinned {
-                shouldRun = true
-                reason = "fijado (pin)"
-            } else if agent == .executing {
-                shouldRun = true
-                reason = "agente ejecutando"
-            } else if agent == .waiting {
-                shouldRun = true
-                reason = "agente esperando input"
-            } else if let idle = idleMin, idle < freshWindow {
-                shouldRun = true
-                reason = String(format: "actividad hace %.0f min", idle)
-            } else if lastOut == nil && agent == .none {
-                shouldRun = false
-                reason = "no abierto en Orca"
-            } else {
-                shouldRun = false
-                let idleTxt = idleMin.map { String(format: "%.0f min", $0) } ?? "—"
-                reason = "idle \(idleTxt)\(underPressure ? " · RAM apretada" : "")"
-            }
-
-            // --- gracia anti-flapping (solo para apagar) ---
-            if shouldRun {
-                inactiveSince[stack.id] = nil
-            } else {
-                let since = inactiveSince[stack.id] ?? now
-                inactiveSince[stack.id] = since
-                let calm = now.timeIntervalSince(since) / 60
-                if calm < config.settings.graceMinutes && (runState == .running || runState == .partial) {
-                    // aún en periodo de gracia: no apagues todavía
-                    shouldRun = true
-                    reason = String(format: "gracia %.0f/%.0f min", calm, config.settings.graceMinutes)
-                }
-            }
-
-            // --- métricas y detalle de Docker ---
-            let names = containerNames(stack, compose: compose, probes: probes)
-            let infos = names.compactMap { probes.infos[$0] }
-                .sorted { $0.running && !$1.running || ($0.running == $1.running && $0.name < $1.name) }
-            let running = infos.filter { $0.running }
-            let cpu = running.reduce(0.0) { $0 + $1.cpuPercent }
-            let mem = running.reduce(0.0) { $0 + $1.memBytes }
-
-            result.append(StackStatus(config: stack, runState: runState, agent: agent,
-                                      idleMinutes: idleMin, shouldRun: shouldRun, reason: reason,
-                                      runningCount: running.count, totalCount: names.count,
-                                      cpuPercent: cpu, memBytes: mem, containers: infos,
-                                      gsd: probes.gsd[stack.orcaPath],
-                                      orca: orcaInfo(stack.orcaPath, probes.orcaWt)))
+            result.append(build(stack, config: config, probes: probes, now: now, nowMs: nowMs,
+                                 freshWindow: freshWindow, underPressure: underPressure,
+                                 procs: procsByRoot[stack.orcaPath] ?? [],
+                                 agent: agentByRoot[stack.orcaPath] ?? .none,
+                                 lastOut: lastOutByRoot[stack.orcaPath], home: home))
+            covered.insert(stack.orcaPath)
+        }
+        // proyectos abiertos en Orca o con servidor host, sin stack en config
+        let discovered = Set(probes.orcaData.roots).union(procsByRoot.keys).subtracting(covered)
+        for root in discovered {
+            let name = (root as NSString).lastPathComponent
+            let synth = StackConfig(id: "auto:\(root)", displayName: name, kind: .none,
+                                    orcaPath: root, managed: false)
+            result.append(build(synth, config: config, probes: probes, now: now, nowMs: nowMs,
+                                freshWindow: freshWindow, underPressure: underPressure,
+                                procs: procsByRoot[root] ?? [],
+                                agent: agentByRoot[root] ?? .none,
+                                lastOut: lastOutByRoot[root], home: home))
         }
         return result
     }
 
-    /// Nombres de contenedores que pertenecen a un stack.
+    private mutating func build(_ stack: StackConfig, config: Config, probes: ProbeResult,
+                                now: Date, nowMs: Double, freshWindow: Double, underPressure: Bool,
+                                procs: [HostProc], agent: AgentState, lastOut: Double?,
+                                home: String) -> StackStatus {
+        let runState = currentRunState(stack, compose: probes.compose, running: probes.running)
+        let idleMin: Double? = lastOut.map { (nowMs - $0) / 60000 }
+        let isUp = (runState == .running || runState == .partial)
+
+        var shouldRun: Bool
+        var reason: String
+        if case .none = stack.kind {
+            shouldRun = false
+            reason = procs.isEmpty ? "solo en Orca / ~/Dev" : "servidor host"
+        } else if !stack.managed {
+            shouldRun = isUp; reason = "no gestionado"
+        } else if stack.pinned {
+            shouldRun = true; reason = "fijado (pin)"
+        } else if agent == .executing {
+            shouldRun = true; reason = "agente ejecutando"
+        } else if agent == .waiting {
+            shouldRun = true; reason = "agente esperando input"
+        } else if let idle = idleMin, idle < freshWindow {
+            shouldRun = true; reason = String(format: "actividad hace %.0f min", idle)
+        } else if lastOut == nil && agent == .none {
+            shouldRun = false; reason = "no abierto en Orca"
+        } else {
+            shouldRun = false
+            let t = idleMin.map { String(format: "%.0f min", $0) } ?? "—"
+            reason = "idle \(t)\(underPressure ? " · RAM apretada" : "")"
+        }
+
+        // gracia anti-flapping (solo para apagar Docker)
+        if shouldRun {
+            inactiveSince[stack.id] = nil
+        } else if isUp {
+            let since = inactiveSince[stack.id] ?? now
+            inactiveSince[stack.id] = since
+            let calm = now.timeIntervalSince(since) / 60
+            if calm < config.settings.graceMinutes {
+                shouldRun = true
+                reason = String(format: "gracia %.0f/%.0f min", calm, config.settings.graceMinutes)
+            }
+        }
+
+        let names = containerNames(stack, compose: probes.compose, probes: probes)
+        let infos = names.compactMap { probes.infos[$0] }
+            .sorted { ($0.running && !$1.running) || ($0.running == $1.running && $0.name < $1.name) }
+        let running = infos.filter { $0.running }
+        return StackStatus(config: stack, runState: runState, agent: agent,
+                           idleMinutes: idleMin, shouldRun: shouldRun, reason: reason,
+                           runningCount: running.count, totalCount: names.count,
+                           cpuPercent: running.reduce(0) { $0 + $1.cpuPercent },
+                           memBytes: running.reduce(0) { $0 + $1.memBytes },
+                           containers: infos,
+                           gsd: probes.gsd[stack.orcaPath],
+                           orca: probes.orcaData.byRoot[stack.orcaPath],
+                           procs: procs.sorted { $0.port < $1.port },
+                           inDev: stack.orcaPath.hasPrefix(home + "/Dev"))
+    }
+
     private func containerNames(_ stack: StackConfig, compose: [String: RunStateDir],
                                 probes: ProbeResult) -> [String] {
         switch stack.kind {
@@ -148,45 +200,23 @@ struct Engine {
             return probes.allContainers.filter { $0.value == project }.map { $0.key }
         case .standalone(let containers):
             return containers
+        case .none:
+            return []
         }
     }
 
-    private func currentRunState(_ stack: StackConfig,
-                                 compose: [String: RunStateDir],
+    private func currentRunState(_ stack: StackConfig, compose: [String: RunStateDir],
                                  running: Set<String>) -> RunState {
         switch stack.kind {
         case .compose(let dir):
-            // casa por directorio del compose
             if let match = compose.first(where: { $0.value.dir == dir })?.value { return match.state }
             return .stopped
         case .standalone(let containers):
             let up = containers.filter { running.contains($0) }.count
             if up == 0 { return .stopped }
-            if up == containers.count { return .running }
-            return .partial
+            return up == containers.count ? .running : .partial
+        case .none:
+            return .stopped
         }
-    }
-
-    /// Info de Orca para un orcaPath: match exacto, si no, el mejor prefijo.
-    private func orcaInfo(_ orcaPath: String, _ all: [String: OrcaInfo]) -> OrcaInfo? {
-        if let exact = all[orcaPath] { return exact }
-        return all.first(where: { $0.key.hasPrefix(orcaPath) })?.value
-    }
-
-    private func agentState(for orcaPath: String, orca: OrcaActivity) -> AgentState {
-        // el más "activo" entre este path y sus hijos
-        var best: AgentState = .none
-        let order: [AgentState] = [.none, .idle, .waiting, .executing]
-        for (path, state) in orca.agentStateByPath where path.hasPrefix(orcaPath) {
-            if order.firstIndex(of: state)! > order.firstIndex(of: best)! { best = state }
-        }
-        if best == .none && orca.hasAgentTab.contains(where: { $0.hasPrefix(orcaPath) }) {
-            best = .idle
-        }
-        return best
-    }
-
-    private func bestLastOutput(for orcaPath: String, orca: OrcaActivity) -> Double? {
-        orca.lastOutputByPath.filter { $0.key.hasPrefix(orcaPath) }.values.max()
     }
 }

@@ -99,7 +99,8 @@ final class AppState: ObservableObject {
                                running: $0.runState == .running || $0.runState == .partial,
                                runningCount: $0.runningCount, totalCount: $0.totalCount,
                                memBytes: $0.memBytes, cpuPercent: $0.cpuPercent,
-                               agent: $0.agent.rawValue, gsd: $0.gsd, orca: $0.orca)
+                               agent: $0.agent.rawValue, gsd: $0.gsd, orca: $0.orca,
+                               procs: $0.procs, inDev: $0.inDev)
             },
             history: history)
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
@@ -161,6 +162,8 @@ func applyDocker(up: Bool, _ stack: StackConfig) {
         up ? DockerProbe.composeUp(dir: dir) : DockerProbe.composeStop(dir: dir)
     case .standalone(let containers):
         for c in containers { up ? DockerProbe.start(container: c) : DockerProbe.stop(container: c) }
+    case .none:
+        break
     }
 }
 

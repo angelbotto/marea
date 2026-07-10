@@ -3,7 +3,8 @@
 ## Milestones
 
 - ✅ **v0.1 Base** — App de barra, motor Orca↔Docker, métricas, panel flotante, widget que compila (shipped 2026-07-08)
-- 🚧 **v0.2 Escritorio vivo + Orca a fondo** — Phases 1-4 (in progress, started 2026-07-08)
+- ✅ **v0.2 Escritorio vivo + Orca a fondo** — Phases 1-4 (shipped 2026-07-08)
+- ✅ **v0.3 Tri-fuente: ~/Dev + Orca + Docker + procesos** — Phases 1-4 (shipped 2026-07-10)
 
 ## Phases
 
@@ -100,3 +101,40 @@ propio (hoy usa el SF Symbol `water.waves`, que me gusta como base).
 **Nota sobre generación del icono:** se decide en el discuss/plan de la fase —
 diseño SVG procedural (determinista, on-brand con la onda) vs. modelo de imagen
 (Ideogram / DALL·E / Midjourney) para algo más ilustrado.
+
+---
+
+### 🚧 v0.3 Tri-fuente: ~/Dev + Orca + Docker + procesos (In Progress)
+
+**Milestone Goal:** Que Marea entienda mis proyectos desde 3 fuentes (carpeta `~/Dev`,
+Orca y Docker) y detecte **qué está corriendo de verdad** — incluido un servidor dev
+**sin Docker** (pnpm dev, cargo, caddy). Que la lista sea Orca/proyecto-céntrica, no
+Docker-céntrica, para que catabum/oniria/etc. aparezcan aunque no tengan stack.
+
+- [ ] **Phase 1: Descubrimiento de proyectos (~/Dev + resolver de raíz)**
+- [ ] **Phase 2: Detección de procesos host (lsof)**
+- [ ] **Phase 3: Modelo unificado (unión) + motor**
+- [ ] **Phase 4: UI tri-fuente (menú + widget + panel)**
+
+#### Phase 1 — Descubrimiento de proyectos
+**Goal:** Enumerar proyectos desde `~/Dev` (dirs con `.git`/`compose`/`.planning`) y
+resolver cualquier ruta (subdir, worktree de Orca, cwd de proceso) a su **raíz de proyecto**.
+**Success:** `ProjectProbe` lista proyectos de ~/Dev; resolver por prefijo de raíz conocida +
+mapeo de worktrees de Orca (repoId → main path); modelo `Project` con banderas de fuente.
+
+#### Phase 2 — Detección de procesos host
+**Goal:** Saber qué servidores corren con o sin Docker.
+**Success:** `ProcessProbe` vía `lsof -iTCP -sTCP:LISTEN` → puerto+cwd → proyecto; expone
+`HostProc{name, port, root}`. Se distingue "corriendo (host)" de "corriendo (Docker)".
+
+#### Phase 3 — Modelo unificado + motor
+**Goal:** La lista = **unión** de proyectos ~/Dev ∪ Orca ∪ Docker, keyed por raíz.
+**Success:** cada proyecto trae fuentes presentes (~/Dev/Orca/Docker), estado de servidor
+(dockerRunning / hostRunning / off / sin-servidor), Orca+GSD+contenedores+procesos.
+Proyectos sin Docker (catabum, oniria) aparecen. El motor Auto sigue operando el Docker.
+
+#### Phase 4 — UI tri-fuente
+**Goal:** Menú, widget y panel muestran por proyecto: badges de fuente (~/Dev·Orca·Docker),
+estado de servidor con puerto (":3001 host" / "3 contenedores"), branch/agente/GSD.
+**Success:** se ve claro qué corre y de dónde; arregla la conflación "Twenty=ostigard"
+(proyecto = ostigard, Twenty = su contenedor).

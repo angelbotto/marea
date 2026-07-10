@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.2
-milestone_name: Escritorio vivo + Orca a fondo
+milestone: v0.3
+milestone_name: Tri-fuente ~/Dev + Orca + Docker + procesos
 current_phase: 4
 status: complete
-stopped_at: Milestone v0.2 completo — PLA aceptado, App Group provisionado, widget vivo
-last_updated: "2026-07-08T23:45:00.000Z"
+stopped_at: Milestone v0.3 completo — tri-fuente (~/Dev + Orca + Docker) + detección de procesos host
+last_updated: "2026-07-10T16:30:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 4

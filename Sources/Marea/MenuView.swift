@@ -102,27 +102,33 @@ struct StackRow: View {
                     if !status.config.managed { Text("manual").font(.system(size: 9)).foregroundStyle(.secondary) }
                 }
                 metricsLine
+                if !status.procs.isEmpty { hostLine }
                 HStack(spacing: 6) {
                     if status.agent != .none { agentBadge }
+                    sourceBadges
                     Text(status.reason).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
                 }
                 if let o = status.orca { OrcaBadge(orca: o) }
                 if let g = status.gsd { GSDBadge(gsd: g) }
             }
             Spacer()
-            if status.config.managed && status.shouldRun != isUp && state.config.settings.autoMode {
-                Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 10)).foregroundStyle(.blue)
-                    .help(status.shouldRun ? "prenderá" : "apagará")
+            if !isNoDocker {
+                if status.config.managed && status.shouldRun != isUp && state.config.settings.autoMode {
+                    Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 10)).foregroundStyle(.blue)
+                        .help(status.shouldRun ? "prenderá" : "apagará")
+                }
+                Button {
+                    state.setPinned(status.config, !status.config.pinned)
+                } label: { Image(systemName: status.config.pinned ? "pin.slash" : "pin") }
+                    .buttonStyle(.borderless).help(status.config.pinned ? "Quitar pin" : "Fijar prendido")
+                Toggle("", isOn: Binding(get: { isUp }, set: { _ in state.toggle(status.config) }))
+                    .toggleStyle(.switch).controlSize(.mini).labelsHidden()
             }
-            Button {
-                state.setPinned(status.config, !status.config.pinned)
-            } label: { Image(systemName: status.config.pinned ? "pin.slash" : "pin") }
-                .buttonStyle(.borderless).help(status.config.pinned ? "Quitar pin" : "Fijar prendido")
-            Toggle("", isOn: Binding(get: { isUp }, set: { _ in state.toggle(status.config) }))
-                .toggleStyle(.switch).controlSize(.mini).labelsHidden()
         }
         .padding(.horizontal, 12).padding(.vertical, 7)
     }
+
+    private var isNoDocker: Bool { if case .none = status.config.kind { return true }; return false }
 
     @ViewBuilder private var metricsLine: some View {
         if isUp {
@@ -139,12 +145,31 @@ struct StackRow: View {
         }
     }
 
+    /// Servidores host (sin Docker): puertos escuchando.
+    private var hostLine: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "bolt.horizontal.circle").font(.system(size: 10)).foregroundStyle(.cyan)
+            Text(status.procs.map { ":\($0.port)" }.joined(separator: " "))
+                .font(.system(size: 10)).foregroundStyle(.cyan).lineLimit(1)
+            Text("host").font(.system(size: 9)).foregroundStyle(.secondary)
+        }
+    }
+
+    /// Badges de fuente: ~/Dev · Orca · Docker.
+    private var sourceBadges: some View {
+        HStack(spacing: 3) {
+            if status.inDev { Image(systemName: "folder").font(.system(size: 8)).foregroundStyle(.secondary).help("~/Dev") }
+            if status.orca != nil { Image(systemName: "water.waves").font(.system(size: 8)).foregroundStyle(.teal).help("Orca") }
+            if status.totalCount > 0 { Image(systemName: "shippingbox").font(.system(size: 8)).foregroundStyle(.blue).help("Docker") }
+        }
+    }
+
     private var dotColor: Color {
-        switch status.runState {
-        case .running: return .green
-        case .partial: return .yellow
-        case .stopped: return .gray.opacity(0.5)
-        case .unknown: return .gray
+        switch status.serverKind {
+        case .docker: return .green
+        case .host: return .cyan
+        case .dockerOff: return .gray.opacity(0.5)
+        case .none: return .gray.opacity(0.3)
         }
     }
 

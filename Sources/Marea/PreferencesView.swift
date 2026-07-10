@@ -117,6 +117,7 @@ struct PreferencesView: View {
         switch kind {
         case .compose(let dir): return "compose · \(dir)"
         case .standalone(let c): return "standalone · \(c.joined(separator: ", "))"
+        case .none: return "sin Docker"
         }
     }
 

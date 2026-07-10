@@ -18,6 +18,8 @@ Marea está pensada alrededor de las herramientas con las que trabajo a diario:
 
 ## ✨ Qué hace
 
+- **Tri-fuente: ~/Dev + Orca + Docker.** Reconcilia tus proyectos desde las 3 fuentes por carpeta, así ves *todos* los que trabajas — no solo los que tienen Docker.
+- **Detecta servidores host (con o sin Docker).** Vía `lsof` sabe qué corre y en qué puerto aunque sea un `pnpm dev`/`cargo run`/`caddy` fuera de Docker (ej. `oniria :3001`).
 - **Sincroniza Orca ↔ Docker.** Si hay un agente ejecutando o actividad reciente en un proyecto, mantiene su stack prendido; si lo dejaste abierto pero ocioso, lo apaga.
 - **Consciente de recursos.** Si el swap está apretado, apaga los stacks ociosos más rápido.
 - **Anti-flapping.** Periodo de gracia configurable para no prender/apagar en bucle.

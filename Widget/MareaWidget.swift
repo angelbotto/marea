@@ -24,7 +24,7 @@ struct MareaWidgetView: View {
     var entry: MareaEntry
     @Environment(\.widgetFamily) var family
 
-    private var running: [WStack] { entry.snapshot?.stacks.filter { $0.running } ?? [] }
+    private var running: [WStack] { entry.snapshot?.stacks.filter { $0.isRunning } ?? [] }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -64,8 +64,13 @@ struct MareaWidgetView: View {
                                 }
                             }
                             Spacer()
-                            Text(widgetHumanBytes(st.memBytes)).font(.system(size: 10))
-                                .foregroundStyle(.secondary).monospacedDigit()
+                            if st.memBytes <= 0, let ps = st.procs, !ps.isEmpty {
+                                Text(ps.map { ":\($0.port)" }.joined(separator: " "))
+                                    .font(.system(size: 9)).foregroundStyle(.cyan).monospacedDigit().lineLimit(1)
+                            } else {
+                                Text(widgetHumanBytes(st.memBytes)).font(.system(size: 10))
+                                    .foregroundStyle(.secondary).monospacedDigit()
+                            }
                         }
                     }
                 }

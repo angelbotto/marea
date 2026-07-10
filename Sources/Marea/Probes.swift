@@ -46,8 +46,12 @@ struct ProbeResult: Sendable {
     var infos: [String: ContainerInfo] = [:]
     /// orcaPath -> estado GSD del proyecto (si usa GSD)
     var gsd: [String: GSDInfo] = [:]
-    /// path del worktree -> info de Orca (branch, status, PR, ...)
-    var orcaWt: [String: OrcaInfo] = [:]
+    /// datos de Orca agrupados por raíz de proyecto
+    var orcaData: OrcaData = OrcaData()
+    /// procesos host escuchando puertos (servidores con/sin Docker)
+    var procs: [RawProc] = []
+    /// raíces de proyecto bajo ~/Dev
+    var devRoots: [String] = []
 }
 
 struct RunStateDir: Sendable {
@@ -245,8 +249,13 @@ enum Probes {
         var allContainers: [String: String] = [:]
         var infos: [String: ContainerInfo] = [:]
         for c in list { allContainers[c.name] = c.project; infos[c.name] = c }
+        let orcaData = OrcaWorktreeProbe.read()
+        let devRoots = ProjectProbe.devRoots()
+        // GSD para la unión de raíces (config + Orca + ~/Dev)
         var gsd: [String: GSDInfo] = [:]
-        for path in Set(orcaPaths) { if let info = GSDProbe.read(path) { gsd[path] = info } }
+        for path in Set(orcaPaths).union(orcaData.roots).union(devRoots) {
+            if let info = GSDProbe.read(path) { gsd[path] = info }
+        }
         return ProbeResult(orca: OrcaProbe.probe(),
                            compose: DockerProbe.composeStates(),
                            running: running,
@@ -254,6 +263,8 @@ enum Probes {
                            allContainers: allContainers,
                            infos: infos,
                            gsd: gsd,
-                           orcaWt: OrcaWorktreeProbe.read())
+                           orcaData: orcaData,
+                           procs: ProcessProbe.read(),
+                           devRoots: devRoots)
     }
 }

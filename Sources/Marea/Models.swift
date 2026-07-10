@@ -6,6 +6,16 @@ enum StackKind: Codable, Equatable, Sendable {
     case compose(dir: String)
     /// contenedores sueltos (docker run): se operan por nombre.
     case standalone(containers: [String])
+    /// proyecto sin Docker (solo ~/Dev / Orca / procesos host).
+    case none
+}
+
+/// Un servidor/proceso corriendo en el host (fuera de Docker).
+struct HostProc: Sendable, Codable, Identifiable {
+    var id: String { "\(name):\(port)" }
+    var name: String
+    var port: Int
+    var root: String   // raíz del proyecto (resuelta del cwd)
 }
 
 /// Definición de un stack: lo que el usuario configura en ~/.config/marea/config.json
@@ -95,21 +105,33 @@ struct StackStatus: Identifiable, Sendable {
     var containers: [ContainerInfo] = []  // detalle por contenedor
     var gsd: GSDInfo?             // estado GSD del proyecto, si aplica
     var orca: OrcaInfo?          // info del worktree en Orca, si aplica
+    var procs: [HostProc] = []   // servidores host (sin Docker) del proyecto
+    var inDev: Bool = false      // existe bajo ~/Dev
+
+    /// De dónde viene lo que corre.
+    var serverKind: ServerKind {
+        if runState == .running || runState == .partial { return .docker }
+        if !procs.isEmpty { return .host }
+        if totalCount > 0 { return .dockerOff }
+        return .none
+    }
 }
 
+enum ServerKind { case docker, host, dockerOff, none }
+
 extension Array where Element == StackStatus {
-    /// Ordena: corriendo primero, luego parcial, luego apagado (estable).
+    /// Ordena: lo que corre primero (Docker o host), luego apagado, luego sin servidor.
     func sortedRunningFirst() -> [StackStatus] {
-        func rank(_ s: RunState) -> Int {
-            switch s {
-            case .running: return 0
-            case .partial: return 1
-            case .stopped: return 2
-            case .unknown: return 3
+        func rank(_ s: StackStatus) -> Int {
+            switch s.serverKind {
+            case .docker: return 0
+            case .host: return 1
+            case .dockerOff: return 2
+            case .none: return 3
             }
         }
         return enumerated().sorted { a, b in
-            let ra = rank(a.element.runState), rb = rank(b.element.runState)
+            let ra = rank(a.element), rb = rank(b.element)
             return ra != rb ? ra < rb : a.offset < b.offset
         }.map { $0.element }
     }
@@ -151,6 +173,8 @@ struct Snapshot: Codable, Sendable {
         var agent: String
         var gsd: GSDInfo?
         var orca: OrcaInfo?
+        var procs: [HostProc] = []
+        var inDev: Bool = false
     }
 }
 
