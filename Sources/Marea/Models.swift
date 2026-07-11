@@ -107,6 +107,10 @@ struct StackStatus: Identifiable, Sendable {
     var orca: OrcaInfo?          // info del worktree en Orca, si aplica
     var procs: [HostProc] = []   // servidores host (sin Docker) del proyecto
     var inDev: Bool = false      // existe bajo ~/Dev
+    var extraConfigs: [StackConfig] = []  // otros stacks Docker del mismo proyecto (dedupe)
+
+    /// Todos los stacks Docker de este proyecto (para prender/apagar juntos).
+    var allConfigs: [StackConfig] { [config] + extraConfigs }
 
     /// De dónde viene lo que corre.
     var serverKind: ServerKind {

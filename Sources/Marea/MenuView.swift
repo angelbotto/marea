@@ -121,7 +121,7 @@ struct StackRow: View {
                     state.setPinned(status.config, !status.config.pinned)
                 } label: { Image(systemName: status.config.pinned ? "pin.slash" : "pin") }
                     .buttonStyle(.borderless).help(status.config.pinned ? "Quitar pin" : "Fijar prendido")
-                Toggle("", isOn: Binding(get: { isUp }, set: { _ in state.toggle(status.config) }))
+                Toggle("", isOn: Binding(get: { isUp }, set: { _ in state.toggle(status) }))
                     .toggleStyle(.switch).controlSize(.mini).labelsHidden()
             }
         }

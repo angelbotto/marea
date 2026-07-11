@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.3
-milestone_name: Tri-fuente ~/Dev + Orca + Docker + procesos
+milestone: v0.4
+milestone_name: Pulido (dedupe, icono barra, gracia, notarización)
 current_phase: 4
-status: complete
-stopped_at: Milestone v0.3 completo — tri-fuente (~/Dev + Orca + Docker) + detección de procesos host
-last_updated: "2026-07-10T16:30:00.000Z"
+status: executing
+stopped_at: Fases 1-3 completas (dedupe, icono barra, gracia); Fase 4 notarización bloqueada (falta cert Developer ID)
+last_updated: "2026-07-11T17:00:00.000Z"
 progress:
   total_phases: 4
-  completed_phases: 4
+  completed_phases: 3
   total_plans: 0
   completed_plans: 0
-  percent: 100
+  percent: 75
 ---
 
 # Project State

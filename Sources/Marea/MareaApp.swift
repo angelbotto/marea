@@ -10,7 +10,7 @@ struct MareaApp: App {
         MenuBarExtra {
             MenuView().environmentObject(state)
         } label: {
-            Image(systemName: menuIcon)
+            Image(nsImage: StatusIcon.image)
         }
         .menuBarExtraStyle(.window)
 
@@ -18,11 +18,6 @@ struct MareaApp: App {
             PreferencesView().environmentObject(state)
         }
         .windowResizability(.contentSize)
-    }
-
-    private var menuIcon: String {
-        let running = state.statuses.filter { $0.runState == .running || $0.runState == .partial }.count
-        return running > 0 ? "water.waves" : "drop"
     }
 }
 

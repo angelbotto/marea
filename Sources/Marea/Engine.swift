@@ -54,10 +54,27 @@ enum ConfigStore {
     }
 }
 
+/// Persiste el estado anti-flapping (gracia) entre reinicios.
+enum GraceStore {
+    static var url: URL {
+        URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".config/marea/grace.json")
+    }
+    static func load() -> [String: Date] {
+        guard let d = try? Data(contentsOf: url) else { return [:] }
+        let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
+        return (try? dec.decode([String: Date].self, from: d)) ?? [:]
+    }
+    static func save(_ m: [String: Date]) {
+        let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
+        if let d = try? enc.encode(m) { try? d.write(to: url) }
+    }
+}
+
 /// Núcleo de decisión: fusiona señales de ~/Dev + Orca + Docker + procesos.
 struct Engine {
     /// Recuerda desde cuándo un stack está inactivo (anti-flapping). id -> fecha.
-    private var inactiveSince: [String: Date] = [:]
+    /// Persistido entre reinicios por AppState (GraceStore).
+    var inactiveSince: [String: Date] = [:]
 
     mutating func evaluate(config: Config, probes: ProbeResult, now: Date = Date()) -> [StackStatus] {
         let underPressure = probes.swap >= config.settings.pressureSwapPercent
@@ -129,7 +146,37 @@ struct Engine {
                                 agent: agentByRoot[root] ?? .none,
                                 lastOut: lastOutByRoot[root], home: home))
         }
-        return result
+        return mergeByRoot(result)
+    }
+
+    /// Fusiona filas que comparten orcaPath en un solo proyecto (ej. Vaekor + OSRM).
+    private func mergeByRoot(_ items: [StackStatus]) -> [StackStatus] {
+        var order: [String] = []
+        var groups: [String: [StackStatus]] = [:]
+        for s in items {
+            let root = s.config.orcaPath
+            if groups[root] == nil { order.append(root) }
+            groups[root, default: []].append(s)
+        }
+        func isDocker(_ s: StackStatus) -> Bool { if case .none = s.config.kind { return false }; return true }
+        func isCompose(_ s: StackStatus) -> Bool { if case .compose = s.config.kind { return true }; return false }
+        return order.map { root in
+            let g = groups[root]!
+            if g.count == 1 { return g[0] }
+            var m = g.first(where: isCompose) ?? g.first(where: isDocker) ?? g[0]
+            // union de contenedores
+            var seen = Set<String>(); var conts: [ContainerInfo] = []
+            for s in g { for c in s.containers where !seen.contains(c.name) { seen.insert(c.name); conts.append(c) } }
+            m.containers = conts.sorted { ($0.running && !$1.running) || ($0.running == $1.running && $0.name < $1.name) }
+            let run = conts.filter { $0.running }
+            m.runningCount = run.count; m.totalCount = conts.count
+            m.cpuPercent = run.reduce(0) { $0 + $1.cpuPercent }
+            m.memBytes = run.reduce(0) { $0 + $1.memBytes }
+            m.runState = conts.isEmpty ? .stopped : (run.isEmpty ? .stopped : (run.count == conts.count ? .running : .partial))
+            m.shouldRun = g.contains { $0.shouldRun }
+            m.extraConfigs = g.filter { $0.config.id != m.config.id }.map { $0.config }
+            return m
+        }
     }
 
     private mutating func build(_ stack: StackConfig, config: Config, probes: ProbeResult,

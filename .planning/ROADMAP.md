@@ -5,6 +5,15 @@
 - ✅ **v0.1 Base** — App de barra, motor Orca↔Docker, métricas, panel flotante, widget que compila (shipped 2026-07-08)
 - ✅ **v0.2 Escritorio vivo + Orca a fondo** — Phases 1-4 (shipped 2026-07-08)
 - ✅ **v0.3 Tri-fuente: ~/Dev + Orca + Docker + procesos** — Phases 1-4 (shipped 2026-07-10)
+- 🚧 **v0.4 Pulido** — dedupe por proyecto, icono de barra, persistir gracia, notarización (started 2026-07-11)
+
+### 🚧 v0.4 Pulido (In Progress)
+**Goal:** Redondear Marea: un proyecto = una fila, icono de barra propio, la gracia
+sobrevive reinicios, y dejar lista la notarización para compartir el .app.
+- [ ] **Phase 1: Dedupe por proyecto** — fusionar stacks que comparten `orcaPath` (ej. Vaekor + OSRM) en una sola fila; el toggle opera sobre todos sus dockers.
+- [ ] **Phase 2: Icono de barra propio** — icono template (monocromo, claro/oscuro) en la status bar, la onda de Marea.
+- [ ] **Phase 3: Persistir gracia** — guardar/recuperar el estado anti-flapping entre reinicios.
+- [ ] **Phase 4: Notarización** — script `notarize.sh` + docs. BLOQUEADO: requiere cert "Developer ID Application" + credenciales notarytool (acción del usuario).
 
 ## Phases
 

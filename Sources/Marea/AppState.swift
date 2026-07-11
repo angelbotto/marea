@@ -23,6 +23,7 @@ final class AppState: ObservableObject {
 
     init() {
         self.config = ConfigStore.load()
+        engine.inactiveSince = GraceStore.load()
         if config.settings.notifications { Notifier.requestAuthorization() }
         scheduleTimer()
         refresh()
@@ -47,6 +48,7 @@ final class AppState: ObservableObject {
         Task {
             let probes = await Task.detached { Probes.gather(withStats: withStats, orcaPaths: orcaPaths) }.value
             let statuses = engine.evaluate(config: cfg, probes: probes).sortedRunningFirst()
+            GraceStore.save(engine.inactiveSince)
             if apply {
                 let acts = statuses.filter { $0.config.managed }.compactMap { s -> (Bool, StackStatus)? in
                     let isUp = (s.runState == .running || s.runState == .partial)
@@ -55,8 +57,8 @@ final class AppState: ObservableObject {
                     return nil
                 }
                 if !acts.isEmpty {
-                    let cfgs = acts.map { ($0.0, $0.1.config) }
-                    await Task.detached { cfgs.forEach { applyDocker(up: $0.0, $0.1) } }.value
+                    let ops = acts.flatMap { (up, s) in s.allConfigs.map { (up, $0) } }
+                    await Task.detached { ops.forEach { applyDocker(up: $0.0, $0.1) } }.value
                     if cfg.settings.notifications {
                         for (up, s) in acts {
                             if up {
@@ -116,13 +118,13 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// Acción manual desde el menú (prende/apaga ya).
-    func toggle(_ stack: StackConfig) {
-        let isUp = statuses.first(where: { $0.id == stack.id })
-            .map { $0.runState == .running || $0.runState == .partial } ?? false
+    /// Acción manual desde el menú (prende/apaga ya todos los dockers del proyecto).
+    func toggle(_ status: StackStatus) {
+        let isUp = status.runState == .running || status.runState == .partial
+        let configs = status.allConfigs
         busy = true
         Task {
-            await Task.detached { applyDocker(up: !isUp, stack) }.value
+            await Task.detached { configs.forEach { applyDocker(up: !isUp, $0) } }.value
             self.busy = false
             self.refresh(applyActions: false)
         }
